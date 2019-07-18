@@ -11,6 +11,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.Socket;
@@ -20,7 +21,7 @@ import java.net.Socket;
  */
 public class CSVServer {
     private ServerSocket server;
-    private String path = constant.Constant.CALL_FILE_RECEIVED_DIR + "\\";
+    private String path = constant.Constant.CALL_FILE_RECEIVED_DIR;
     private int count = 1;
     
     public CSVServer() throws IOException {
@@ -55,6 +56,9 @@ public class CSVServer {
     
     public void receiveFiles() throws IOException {
         Socket socket = null;
+        File file = new File(path);
+        if (!file.exists())
+            file.mkdir();
         while (true) {
             socket = server.accept();
             socket.setSoTimeout(5000);
@@ -68,7 +72,7 @@ public class CSVServer {
             for (int i = 0; i < filesNum; i++) {
                 
                 String fileName = dis.readUTF();
-                FileOutputStream fos = new FileOutputStream(path + fileName);
+                FileOutputStream fos = new FileOutputStream(path + "\\" + fileName);
                 BufferedOutputStream bos = new BufferedOutputStream(fos);
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 long length = dis.readLong();

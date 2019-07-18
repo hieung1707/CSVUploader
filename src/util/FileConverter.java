@@ -5,6 +5,7 @@
  */
 package util;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Date;
@@ -22,10 +23,13 @@ public class FileConverter {
     private StringBuilder builder;
     
     public FileConverter() {
-        this.path = constant.Constant.CALL_FILES_DIR + "\\";
+        this.path = constant.Constant.CALL_FILES_DIR;
     }
     
     public void convertToCallFile(List<List<String>> listRows) throws IOException {
+        File file = new File(path);
+        if (!file.exists())
+            file.mkdir();
         for (List<String> row : listRows) {
             String customerNum = row.get(1);
             String customerName = row.get(2);
@@ -53,6 +57,7 @@ public class FileConverter {
             String content = builder.toString();
             
             FileWriter writer = new FileWriter(path 
+                    + "\\"
                     + customerNum 
                     + "-" 
                     + extension.toLowerCase() 

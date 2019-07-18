@@ -11,6 +11,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  *
@@ -20,6 +21,7 @@ public class DataParser {
     public static Date parseStringToDate(String dateString) {
         Date date = null;
         try {
+            System.out.println(dateString);
             SimpleDateFormat df = new SimpleDateFormat("dd/MM/yyyy");
             date = df.parse(dateString);
             return date;

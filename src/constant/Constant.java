@@ -16,6 +16,6 @@ public interface Constant {
     public static final String CALLERID = "Home Credit Vietnam <02473000217>";
     public static final String CONTEXT = "outboundhc";
     public static final String PRIORITY = "1";
-    public static final String CALL_FILES_DIR = "C:\\Users\\ASUS\\Documents\\NetBeansProjects\\CSVUploader\\call_files";
+    public static final String CALL_FILES_DIR = "C:\\Users\\ASUS\\Documents\\NetBeansProjects\\CSVUploader";
     public static final String CALL_FILE_RECEIVED_DIR = "C:\\Users\\ASUS\\Documents\\NetBeansProjects\\CSVUploader\\call_files_recv";
 }

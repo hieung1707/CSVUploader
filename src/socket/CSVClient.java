@@ -26,13 +26,13 @@ public class CSVClient {
     private String path;
     private boolean isStreaming = false;
 
-    public CSVClient(String path) throws IOException {
-        clientSocket = new Socket(Constant.SERVER_ADDRESS, Constant.SERVER_PORT);
+    public CSVClient(String path, String ip, int port) throws IOException {
+        clientSocket = new Socket(ip, port);
         this.path = path;
     }
     
-    public CSVClient() throws IOException {
-        clientSocket = new Socket(Constant.SERVER_ADDRESS, Constant.SERVER_PORT);
+    public CSVClient(String ip, int port) throws IOException {
+        clientSocket = new Socket(ip, port);
     }
 
     public void sendFile() throws FileNotFoundException, IOException {
@@ -71,7 +71,7 @@ public class CSVClient {
     
     public static void main(String[] args) {
         try {
-            new CSVClient("input.csv").sendFiles();
+            new CSVClient("input.csv", Constant.SERVER_ADDRESS, Constant.SERVER_PORT).sendFiles();
         } catch (Exception e) {
             e.printStackTrace();
         }

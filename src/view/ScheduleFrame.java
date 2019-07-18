@@ -7,8 +7,10 @@ package view;
 
 import constant.Constant;
 import java.awt.Color;
+import java.awt.HeadlessException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
@@ -17,6 +19,7 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.regex.Pattern;
 import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
 import javax.swing.JOptionPane;
@@ -110,9 +113,20 @@ public class ScheduleFrame extends javax.swing.JFrame implements ActionListener 
         }
         return delay;
     }
+    
+    public boolean isInteger(String numStr) {
+       String pt = "[0-9]+";
+       return Pattern.matches(pt, numStr);
+    }
+    
+    public boolean isIP(String ip) {
+        String subnet = "[0-9]{1,3}";
+        String pt = subnet + "[.]" + subnet + "[.]" + subnet + "[.]" + subnet;
+        return Pattern.matches(pt, ip) || ip.equals("localhost");
+    }
 
     private void timerErrorHandler() {
-        JOptionPane.showMessageDialog(getParent(), "An error has occured with timer");
+        JOptionPane.showMessageDialog(getParent(), "An error has occured");
         isOnline = false;
         changeStatus();
         timer.cancel();
@@ -120,26 +134,43 @@ public class ScheduleFrame extends javax.swing.JFrame implements ActionListener 
 
     private void startSchedule() {
         try {
+            String ip = txtIP.getText().trim();
+            String portStr = txtPort.getText().trim();
             String startType = getSelectedButtonText(startRadioGroup);
             String loopType = getSelectedButtonText(loopRadioGroup);
             if (startType == null || loopType == null) {
-                throw new Exception();
+                JOptionPane.showMessageDialog(this, "Please check the radio boxes");
+                return;
             }
-            btnSchedule.setText("Stop");
-            isOnline = true;
-            changeStatus();
+            if (ip.equals("") || portStr.equals("")) {
+                JOptionPane.showMessageDialog(this, "Please enter server address");
+                return;
+            }
+            if (!isIP(ip) || !isInteger(portStr)) {
+                JOptionPane.showMessageDialog(this, "Invalid IP and Port");
+                return;
+            }
             long delay = calculateDelay(startType) * 1000; // calculate delay in miliseconds between time of interacting to time the task start
             if (delay < 0) {
                 JOptionPane.showMessageDialog(this, "Start time is from the past. Please select another date");
                 return;
             }
+            int port = Integer.parseInt(portStr);
             long interval = 0;
-            if (loopType.equals("loop_interval"))
+            if (loopType.equals("loop_interval")) {
+                if (!isInteger(txtInterval.getText())) {
+                    JOptionPane.showMessageDialog(this, "Interval should be integer");
+                    return;
+                }
                 interval = Long.parseLong(txtInterval.getText()) * 60 * 1000;
-            FileSenderThread thread = new FileSenderThread(delay, interval);
+            }
+            btnSchedule.setText("Stop");
+            isOnline = true;
+            changeStatus();
+            FileSenderThread thread = new FileSenderThread(delay, interval, ip, port);
             thread.start();
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Please check the radio boxes");
+            e.printStackTrace();
         }
     }
 
@@ -164,6 +195,8 @@ public class ScheduleFrame extends javax.swing.JFrame implements ActionListener 
             comboMinute.setEnabled(false);
             txtDate.setEnabled(false);
             txtInterval.setEnabled(false);
+            txtIP.setEnabled(false);
+            txtPort.setEnabled(false);
         } else {
             txtStatus.setForeground(new Color(0, 0, 0));
             txtStatus.setText("Offline");
@@ -171,6 +204,8 @@ public class ScheduleFrame extends javax.swing.JFrame implements ActionListener 
             radioStartDelay.setEnabled(true);
             radioLoopOnce.setEnabled(true);
             radioLoopInterval.setEnabled(true);
+            txtIP.setEnabled(false);
+            txtPort.setEnabled(false);
             radioStartClick();
             radioLoopClick();
         }
@@ -244,6 +279,11 @@ public class ScheduleFrame extends javax.swing.JFrame implements ActionListener 
         txtLastTransmit = new javax.swing.JLabel();
         lblNextTransmit = new javax.swing.JLabel();
         btnBack = new javax.swing.JButton();
+        jLabel10 = new javax.swing.JLabel();
+        txtIP = new javax.swing.JTextField();
+        jLabel11 = new javax.swing.JLabel();
+        txtPort = new javax.swing.JTextField();
+        jLabel12 = new javax.swing.JLabel();
 
         jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
 
@@ -331,6 +371,21 @@ public class ScheduleFrame extends javax.swing.JFrame implements ActionListener 
         btnBack.setActionCommand("back");
         btnBack.addActionListener(this);
 
+        jLabel10.setText("Server");
+
+        txtIP.setText("localhost");
+        txtIP.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                txtIPActionPerformed(evt);
+            }
+        });
+
+        jLabel11.setText("IP");
+
+        txtPort.setText("10000");
+
+        jLabel12.setText("Port");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -339,13 +394,10 @@ public class ScheduleFrame extends javax.swing.JFrame implements ActionListener 
                 .addGap(24, 24, 24)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(jLabel9)
-                        .addGap(0, 0, Short.MAX_VALUE))
-                    .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
                                 .addComponent(jLabel3)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 125, Short.MAX_VALUE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                 .addComponent(btnBack))
                             .addGroup(layout.createSequentialGroup()
                                 .addComponent(jLabel6)
@@ -377,18 +429,32 @@ public class ScheduleFrame extends javax.swing.JFrame implements ActionListener 
                                             .addComponent(txtInterval, javax.swing.GroupLayout.PREFERRED_SIZE, 161, javax.swing.GroupLayout.PREFERRED_SIZE)
                                             .addComponent(btnSchedule, javax.swing.GroupLayout.PREFERRED_SIZE, 89, javax.swing.GroupLayout.PREFERRED_SIZE)))
                                     .addComponent(txtLastTransmit, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(lblNextTransmit, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                    .addComponent(lblNextTransmit, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                            .addComponent(jLabel11)
+                                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                            .addComponent(txtIP, javax.swing.GroupLayout.PREFERRED_SIZE, 161, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                            .addComponent(jLabel12)
+                                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                            .addComponent(txtPort, javax.swing.GroupLayout.PREFERRED_SIZE, 161, javax.swing.GroupLayout.PREFERRED_SIZE)))))
                             .addComponent(radioStartDelay)
                             .addComponent(radioStartNow)
                             .addComponent(jLabel8))
-                        .addContainerGap())))
+                        .addGap(24, 24, 24))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel10)
+                            .addComponent(jLabel9))
+                        .addGap(0, 0, Short.MAX_VALUE))))
         );
-
-        layout.linkSize(javax.swing.SwingConstants.HORIZONTAL, new java.awt.Component[] {jLabel1, jLabel2});
 
         layout.linkSize(javax.swing.SwingConstants.HORIZONTAL, new java.awt.Component[] {comboHour, comboMinute});
 
         layout.linkSize(javax.swing.SwingConstants.HORIZONTAL, new java.awt.Component[] {lblNextTransmit, txtLastTransmit});
+
+        layout.linkSize(javax.swing.SwingConstants.HORIZONTAL, new java.awt.Component[] {jLabel1, jLabel11, jLabel12, jLabel2, jLabel5});
 
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -421,9 +487,19 @@ public class ScheduleFrame extends javax.swing.JFrame implements ActionListener 
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(txtInterval, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel5))
-                .addGap(35, 35, 35)
+                .addGap(18, 18, 18)
+                .addComponent(jLabel10)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(txtIP, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel11))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(txtPort, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel12))
+                .addGap(18, 18, 18)
                 .addComponent(btnSchedule, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 9, Short.MAX_VALUE)
+                .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel8)
                     .addComponent(txtLastTransmit))
@@ -454,6 +530,10 @@ public class ScheduleFrame extends javax.swing.JFrame implements ActionListener 
     private void comboHourActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_comboHourActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_comboHourActionPerformed
+
+    private void txtIPActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtIPActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_txtIPActionPerformed
 
     /**
      * @param args the command line arguments
@@ -497,6 +577,9 @@ public class ScheduleFrame extends javax.swing.JFrame implements ActionListener 
     private javax.swing.JComboBox<String> comboMinute;
     private javax.swing.JComboBox<String> jComboBox1;
     private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel10;
+    private javax.swing.JLabel jLabel11;
+    private javax.swing.JLabel jLabel12;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
@@ -511,8 +594,10 @@ public class ScheduleFrame extends javax.swing.JFrame implements ActionListener 
     private javax.swing.JRadioButton radioStartDelay;
     private javax.swing.JRadioButton radioStartNow;
     private com.toedter.calendar.JDateChooser txtDate;
+    private javax.swing.JTextField txtIP;
     private javax.swing.JTextField txtInterval;
     private javax.swing.JLabel txtLastTransmit;
+    private javax.swing.JTextField txtPort;
     private javax.swing.JLabel txtStatus;
     // End of variables declaration//GEN-END:variables
 
@@ -545,10 +630,14 @@ public class ScheduleFrame extends javax.swing.JFrame implements ActionListener 
         
         private long delay;
         private long interval;
+        private String ip;
+        private int port;
         
-        public FileSenderThread(long delay, long interval) {
+        public FileSenderThread(long delay, long interval, String ip, int port) {
             this.delay = delay;
             this.interval = interval;
+            this.ip = ip;
+            this.port = port;
         }
         
         @Override
@@ -566,12 +655,12 @@ public class ScheduleFrame extends javax.swing.JFrame implements ActionListener 
                 public void run() {
                     try {
                         convertToCallFile(path);
-                        new CSVClient().sendFiles();
+                        new CSVClient(ip, port).sendFiles();
                         txtLastTransmit.setText(DataParser.parseDateTimeToString(new Date()));
                         lblNextTransmit.setText("");
                         JOptionPane.showMessageDialog(getParent(), "File sent");
                         endSchedule();
-                    } catch (Exception e) {
+                    } catch (HeadlessException | IOException e) {
                         e.printStackTrace();
                         timerErrorHandler();
                     }
@@ -585,11 +674,11 @@ public class ScheduleFrame extends javax.swing.JFrame implements ActionListener 
                 public void run() {
                     try {
                         convertToCallFile(path);
-                        new CSVClient().sendFiles();
+                        new CSVClient(ip, port).sendFiles();
                         Date currentTime = new Date();
                         txtLastTransmit.setText((DataParser.parseDateTimeToString(currentTime)));
                         lblNextTransmit.setText(calculateNextTransmitTime(currentTime));
-                    } catch (Exception e) {
+                    } catch (IOException e) {
                         e.printStackTrace();
                         timerErrorHandler();
                     }

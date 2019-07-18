@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package util;
+package testpkg;
 
 import java.time.Duration;
 import java.time.ZoneId;
@@ -46,7 +46,7 @@ public class ScheduleTest {
         @Override
         public void run() {
             try {
-                new CSVClient("input.csv").sendFiles();
+                new CSVClient("input.csv", constant.Constant.SERVER_ADDRESS, constant.Constant.SERVER_PORT).sendFiles();
             } catch (Exception e) {
                 e.printStackTrace();
             }
